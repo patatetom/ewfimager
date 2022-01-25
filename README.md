@@ -11,4 +11,8 @@ _GTK GUI for ewfacquire_
 
 ## installation
 
+
 ## usage
+
+
+## screenshots
