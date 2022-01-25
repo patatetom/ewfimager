@@ -14,5 +14,21 @@ _GTK GUI for ewfacquire_
 
 ## usage
 
+```console
+# usage : ewfimager [input [output]]
+
+# without parameter
+ewfimager
+
+# with input only
+ewfimager /dev/nvme0n1p1
+
+# with input and output
+ewfimager /dev/nvme0n1p1 /tmp/test/nvme0n1p1.img.E01
+
+# with output only
+ewfimager '' /tmp/test/nvme0n1p1.img.E01
+```
+
 
 ## screenshots
