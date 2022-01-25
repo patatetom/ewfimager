@@ -77,16 +77,21 @@ yad_file_options="
     --filename=${selected_device##*/}.$( date +%Y_%m_%d-%H_%M).E01
 "
 
-if [ "${2:-x}" != "x" ] && [ -s "$2" ]
+if [ "${2:-x}" != "x" ]
 then
 
-    yad_overwrite_options="
-        --fixed
-        --image=dialog-question-symbolic
-    "
+    if [ -s "$2" ]
+    then
 
-    yad $yad_global_options $yad_overwrite_options --text="\n File exist. Overwrite? \n" ||
-        exit $?
+        yad_overwrite_options="
+            --fixed
+            --image=dialog-question-symbolic
+        "
+
+        yad $yad_global_options $yad_overwrite_options --text="\n Output exist. Overwrite? \n" ||
+            exit $?
+
+    fi
 
     file_name=$2
 
