@@ -13,6 +13,7 @@ set -uo pipefail
 yad_global_options="
     --title=EWFImager
     --sticky
+    --center
     --window-icon=org.gnome.SimpleScan
 "
 
@@ -73,7 +74,7 @@ yad_file_options="
     --file
     --save
     --confirm-overwrite
-    --filename=${selected_device##*/}.$( date +%Y_%m_%d-%H_%M)
+    --filename=${selected_device##*/}.$( date +%Y_%m_%d-%H_%M).E01
 "
 
 if [ "${2:-x}" != "x" ] && [ -s "$2" ]
@@ -81,7 +82,6 @@ then
 
     yad_overwrite_options="
         --fixed
-        --center
         --image=dialog-question-symbolic
     "
 
@@ -135,7 +135,7 @@ mkfifo $fifo ||
     exit $?
 trap "rm $fifo" exit
 
-ewfacquire $ewf_options -t "$file_name" $selected_device 1> $fifo 2> "$error_log" & ewfacquire_pid=$!
+ewfacquire $ewf_options -t "${file_name%.E01}" $selected_device 1> $fifo 2> "$error_log" & ewfacquire_pid=$!
 yad $yad_global_options $yad_progress_options < <( tee "$acquire_log" < $fifo | sed -u 's/^/#/g' )
 
 exit_status=$?
@@ -151,8 +151,6 @@ yad_ok_options="
     --button=Return
     --image=emblem-default
 "
-
-file_name=$file_name.E01
 
 if [ $exit_status -ne 0 ]
 then
