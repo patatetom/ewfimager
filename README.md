@@ -32,3 +32,9 @@ ewfimager '' /tmp/test/nvme0n1p1.img.E01
 
 
 ## screenshots
+
+![select input](input.png)
+![select output](output.png)
+![acquisition process](acquire.png)
+![acquisition success](ok.png)
+
