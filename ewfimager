@@ -1,0 +1,181 @@
+#!/bin/bash
+
+
+# GTK GRAPHIC USER INTERFACE FOR EWFACQUIRE FROM LIBEWF
+# dependencies are
+# - bash, dd, grep, kill, mkfifo, rm, sed, tail, touch, tr (usually available on Linux)
+# - ewfacquire (https://github.com/libyal/libewf)
+# - yad (https://github.com/v1cont/yad)
+
+
+set -uo pipefail
+
+yad_global_options="
+    --title=EWFImager
+    --sticky
+    --window-icon=org.gnome.SimpleScan
+"
+
+
+#######################################################
+# ##### select device (eg. source for ewfacquire) #####
+
+yad_list_options="
+    --list
+    --geometry=800x320
+    --text=Select
+    --column=PATH
+    --column=TYPE
+    --column=SIZE
+    --column=STATE
+    --column=MOUNTPOINT
+    --column=MODEL
+    --column=SERIAL
+"
+
+if [ "${1:-x}" != "x" ] && [ -b "$1" ]
+then
+
+    selected_device=$1
+
+else
+
+    [ "${1:-x}" != "x" ] &&
+        echo "$1 is not a block device" > /dev/stderr
+    selected_device=$(
+        yad $yad_global_options $yad_list_options --listen < <(
+            # devices informations from lsblk in the form of key="value" pairs
+            lsblk -nP -e7 -o path,type,size,state,mountpoint,model,serial |
+            # remove key part and split all fields
+            sed -e 's/[A-Z]\+=//g' -e 's/" "/\n/g' |
+            # remove extra quotes
+            tr -d '"'
+        )
+    )
+
+    exit_status=$?
+
+    [ $exit_status -ne 0 ] &&
+        exit $exit_status
+
+fi
+
+selected_device=${selected_device%%|*}
+
+dd if=$selected_device count=1 status=none > /dev/null ||
+    exit $?
+
+
+############################################################
+# ##### select output file (eg. target for ewfacquire) #####
+
+yad_file_options="
+    --file
+    --save
+    --confirm-overwrite
+    --filename=${selected_device##*/}.$( date +%Y_%m_%d-%H_%M)
+"
+
+if [ "${2:-x}" != "x" ] && [ -s "$2" ]
+then
+
+    yad_overwrite_options="
+        --fixed
+        --center
+        --image=dialog-question-symbolic
+    "
+
+    yad $yad_global_options $yad_overwrite_options --text="\n File exist. Overwrite? \n" ||
+        exit $?
+
+    file_name=$2
+
+else
+
+    file_name=$( yad $yad_global_options $yad_file_options )
+
+    exit_status=$?
+
+    [ $exit_status -ne 0 ] &&
+        exit $exit_status
+
+fi
+
+touch "$file_name" ||
+    exit $?
+
+
+##################################################
+# ##### acquire selected_device to file_name #####
+
+ewf_options="
+    -c best
+    -d sha256
+    -u
+    -w
+"
+
+yad_progress_options="
+    --progress
+    --geometry=640x320
+    --pulsate
+    --auto-close
+    --enable-log
+    --log-expanded
+    --button=Cancel:252
+"
+
+error_log=$file_name.err
+acquire_log=$file_name.log
+touch "$error_log" "$acquire_log" ||
+    exit $?
+
+fifo=/tmp/.$$.fifo
+mkfifo $fifo ||
+    exit $?
+trap "rm $fifo" exit
+
+ewfacquire $ewf_options -t "$file_name" $selected_device 1> $fifo 2> "$error_log" & ewfacquire_pid=$!
+yad $yad_global_options $yad_progress_options < <( tee "$acquire_log" < $fifo | sed -u 's/^/#/g' )
+
+exit_status=$?
+
+yad_ko_options="
+    --fixed
+    --button=Cancel
+    --image=emblem-noread
+"
+
+yad_ok_options="
+    --fixed
+    --button=Return
+    --image=emblem-default
+"
+
+file_name=$file_name.E01
+
+if [ $exit_status -ne 0 ]
+then
+    kill $ewfacquire_pid
+    rm "$error_log" "$acquire_log" "$file_name"
+    if [ $exit_status -ne 252 ]
+    then
+        yad $yad_global_options $yad_ko_options --text="An error has occurred."
+    fi
+    exit $exit_status
+fi
+if [ -s "$error_log" ]
+then
+    yad $yad_global_options $yad_ko_options --text="$( sed '/^$/d' $err )"
+    rm "$acquire_log" "$file_name"
+    exit 1
+elif ! grep -q SUCCESS <( tail -1 "$acquire_log" )
+then
+    rm "$error_log" "$acquire_log" "$file_name"
+    yad $yad_global_options $yad_ko_options --text="An error has occurred."
+    exit 143
+else
+    yad $yad_global_options $yad_ok_options --text="$( sed -n '/^Acquiry completed/,${/./p}' "$acquire_log" )"
+    rm "$error_log"
+    exit 0
+fi
