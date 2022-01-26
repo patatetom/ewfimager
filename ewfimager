@@ -14,7 +14,7 @@ yad_global_options="
     --title=EWFImager
     --sticky
     --center
-    --window-icon=org.gnome.SimpleScan
+    --window-icon=scanner
 "
 
 
@@ -148,13 +148,13 @@ exit_status=$?
 yad_ko_options="
     --fixed
     --button=Cancel
-    --image=emblem-noread
+    --image=dialog-error
 "
 
 yad_ok_options="
     --fixed
     --button=Return
-    --image=emblem-default
+    --image=dialog-information
 "
 
 if [ $exit_status -ne 0 ]
@@ -169,7 +169,7 @@ then
 fi
 if [ -s "$error_log" ]
 then
-    yad $yad_global_options $yad_ko_options --text="$( sed '/^$/d' $err )"
+    yad $yad_global_options $yad_ko_options --text="$( sed '/^$/d' $error_log )"
     rm "$acquire_log" "$file_name"
     exit 1
 elif ! grep -q SUCCESS <( tail -1 "$acquire_log" )
