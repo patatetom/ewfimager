@@ -14,7 +14,12 @@ yad_global_options="
     --title=EWFImager
     --sticky
     --center
-    --window-icon=scanner
+    --window-icon=org.gnome.SimpleScan
+"
+
+yad_question_options="
+    --fixed
+    --image=dialog-question
 "
 
 
@@ -41,8 +46,14 @@ then
 
 else
 
-    [ "${1:-x}" != "x" ] &&
-        echo "$1 is not a block device" > /dev/stderr
+    if [ "${1:-x}" != "x" ]
+    then
+
+        yad $yad_global_options $yad_question_options --text="\n $1 is not a valid input. Continue with selector? \n" ||
+        	exit $?
+
+    fi
+    
     selected_device=$(
         yad $yad_global_options $yad_list_options --listen < <(
             # devices informations from lsblk in the form of key="value" pairs
@@ -80,20 +91,17 @@ yad_file_options="
 if [ "${2:-x}" != "x" ]
 then
 
-    if [ -s "$2" ]
+    [[ "${2^^}" =~ \.E01$ ]] \
+    && file_name=${2:: -4}.E01 \
+    || file_name=$2.E01
+
+    if [ -s "$file_name" ]
     then
 
-        yad_overwrite_options="
-            --fixed
-            --image=dialog-question-symbolic
-        "
-
-        yad $yad_global_options $yad_overwrite_options --text="\n Output exist. Overwrite? \n" ||
+        yad $yad_global_options $yad_question_options --text="\n Output $file_name exist. Overwrite? \n" ||
             exit $?
 
     fi
-
-    file_name=$2
 
 else
 
