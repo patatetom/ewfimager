@@ -91,9 +91,9 @@ yad_file_options="
 if [ "${2:-x}" != "x" ]
 then
 
-    [[ "${2^^}" =~ \.E01$ ]] \
-    && file_name=${2:: -4}.E01 \
-    || file_name=$2.E01
+    [[ "${2^^}" =~ \.E01$ ]] &&
+        file_name=${2:: -4}.E01 ||
+            file_name=$2.E01
 
     if [ -s "$file_name" ]
     then
